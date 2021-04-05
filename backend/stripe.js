@@ -24,7 +24,30 @@ const confirmPaymentIntent = async (req, res) => {
   }
 }
 
+const createCustomer = async (req, res) => {
+  try {
+    const customer = await stripe.customers.create({ description: 'My First Test Customer from stripe examples' });
+    return res.json(customer);
+  } catch (error) {
+    console.log(error.message);
+    return res.json({ error: error.message || 'Something went wrong!' });
+  }
+}
+
+const updatePaymentIntent = async (req, res) => {
+  try {
+    const { id, ...rest } = req.body;
+    const paymentIntent = await stripe.paymentIntents.update(id, rest);
+    return res.json(paymentIntent);
+  } catch (error) {
+    console.log(error.message);
+    return res.json({ error: error.message || 'Something went wrong!' });
+  }
+}
+
 module.exports = {
   createPaymentIntent,
-  confirmPaymentIntent
+  confirmPaymentIntent,
+  createCustomer,
+  updatePaymentIntent,
 }

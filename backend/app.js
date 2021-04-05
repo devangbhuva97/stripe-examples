@@ -27,6 +27,8 @@ app.get('/health', (_, res) => res.send('OK'));
 
 app.post('/create-payment-intent', stripe.createPaymentIntent);
 app.post('/confirm-payment-intent', stripe.confirmPaymentIntent);
+app.post('/create-customer', stripe.createCustomer);
+app.post('/update-payment-intent', stripe.updatePaymentIntent);
 
 
 app.listen({ port: 3000 }, () => {

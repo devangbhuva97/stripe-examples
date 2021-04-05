@@ -30,11 +30,14 @@ const AcceptPaymentDemo = () => {
 
   const [errorMsg, setErrorMsg] = useState();
   const [successMsg, setSuccessMsg] = useState();
+  const [connectWithCustomer, setConnectWithCustomer] = useState(false);
 
   const clearMsg = () => {
     if (errorMsg) setErrorMsg();
     if (successMsg) setSuccessMsg();
   }
+
+  const onHandleChangeConnectWithCustomer = (e) => setConnectWithCustomer(e.target.checked);
 
   const completesPaymentAtClient = async event => {
     event.preventDefault();
@@ -63,7 +66,10 @@ const AcceptPaymentDemo = () => {
 
     if (payload.error) return setErrorMsg(payload.error.message);
 
-    return setSuccessMsg('Payment completed at client side');
+    if (!connectWithCustomer) return setSuccessMsg('Payment completed at client side');
+
+    return connectPaymentIntentWithCustomer(payload.paymentIntent.id, 'Payment completed at client side and connected with customer');
+
   };
 
   const completesPaymentAtPartialClientServer = async event => {
@@ -117,13 +123,15 @@ const AcceptPaymentDemo = () => {
 
       if (confirmPaymentIntentError) return setErrorMsg(confirmPaymentIntentError);
 
-      return setSuccessMsg('Payment completed at server side');
+      if (!connectWithCustomer) return setSuccessMsg('Payment completed at server side');
 
-    } else {
-
-      return setSuccessMsg('Payment completed at client side');
+      return connectPaymentIntentWithCustomer(confirmPaymentIntentResponse.data.id, 'Payment completed at server side and connected with customer');
 
     }
+
+    if (!connectWithCustomer) return setSuccessMsg('Payment completed at client side');
+
+    return connectPaymentIntentWithCustomer(createPaymentIntentResponse.data.id, 'Payment completed at client side and connected with customer');
 
   };
 
@@ -187,18 +195,36 @@ const AcceptPaymentDemo = () => {
 
         const confirmPaymentIntentError2 = idx(confirmPaymentIntentResponse2,_ => _.data.error);
 
-        if (!confirmPaymentIntentError2) return setErrorMsg(confirmPaymentIntentError2);
-
-        return setSuccessMsg('Payment completed at server side');
-
-      } else {
-
-        return setSuccessMsg('Payment completed at server side');
+        if (confirmPaymentIntentError2) return setErrorMsg(confirmPaymentIntentError2);
 
       }
 
+      if (!connectWithCustomer) return setSuccessMsg('Payment completed at server side');
+
+      return connectPaymentIntentWithCustomer(confirmPaymentIntentResponse.data.id);
+
     }
   };
+
+  const connectPaymentIntentWithCustomer = async (paymentIntentID, message = 'Payment completed at server side and connected with customer') => {
+
+    const createCustomerResponse = await axiox.post(`${process.env.API_URL}/create-customer`);
+
+      console.log('====================================================');
+      console.log("[Create Customer]", createCustomerResponse);
+
+      const createCustomerError = idx(createCustomerResponse,_ => _.data.error);
+
+      if (createCustomerError) return setErrorMsg(createCustomerError);
+
+      const updatePaymentIntentResponse = await axiox.post(`${process.env.API_URL}/update-payment-intent`, { id: paymentIntentID, customer: createCustomerResponse.data.id });
+
+      console.log('====================================================');
+      console.log("[Update Payment Intent]", updatePaymentIntentResponse);
+      
+      return setSuccessMsg(message);
+
+  }
 
   return (
     <div className="container">
@@ -227,6 +253,10 @@ const AcceptPaymentDemo = () => {
             </ul>
             <div className="mb-5">
               <CardElement options={CARD_ELEMENT_OPTIONS} onChange={clearMsg} />
+              <div className="custom-control custom-checkbox text-left">
+                <input type="checkbox" className="custom-control-input" id="connect_with_customer" value={connectWithCustomer} onChange={onHandleChangeConnectWithCustomer} />
+                <label className="custom-control-label text-dark" htmlFor="connect_with_customer">Connect with Customer</label>
+              </div>
               {errorMsg && <span className="text-danger">{errorMsg}</span>}
               {successMsg && <span className="text-success">{successMsg}</span>}
             </div>
