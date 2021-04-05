@@ -1,0 +1,16 @@
+{
+  "name": "stripe-examples-backend",
+  "version": "1.0.0",
+  "description": "Stripe Payment Flow Examples - Backend",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "author": "Devang Bhuva",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "stripe": "^8.141.0"
+  }
+}
