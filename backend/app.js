@@ -25,6 +25,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.get('/health', (_, res) => res.send('OK'));
 
+app.post('/setup-intent', stripe.setupIntent);
 app.post('/create-payment-intent', stripe.createPaymentIntent);
 app.post('/confirm-payment-intent', stripe.confirmPaymentIntent);
 app.post('/create-customer', stripe.createCustomer);

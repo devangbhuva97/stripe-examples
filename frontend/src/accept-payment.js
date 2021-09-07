@@ -4,7 +4,7 @@ import { Elements, useStripe, useElements, CardElement } from "@stripe/react-str
 import axiox from "axios";
 import idx from 'idx';
 
-const stripePromise = loadStripe(process.env.STRIPE_PUB_KEY);
+const stripePromise = loadStripe(process.env.STRIPE_PUB_KEY, { stripeAccount: process.env.STRIPE_CUS_ACCOUNT_ID });
 
 const CARD_ELEMENT_OPTIONS = {
   style: {
@@ -75,7 +75,7 @@ const AcceptPaymentDemo = () => {
   const completesPaymentAtPartialClientServer = async event => {
     event.preventDefault();
 
-   clearMsg();
+    clearMsg();
 
     if (!stripe || !elements) {
       // Stripe.js has not loaded yet. Make sure to disable
