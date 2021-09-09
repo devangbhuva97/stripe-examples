@@ -30,6 +30,7 @@ app.post('/create-payment-intent', stripe.createPaymentIntent);
 app.post('/confirm-payment-intent', stripe.confirmPaymentIntent);
 app.post('/create-customer', stripe.createCustomer);
 app.post('/update-payment-intent', stripe.updatePaymentIntent);
+app.post('/purchase-products', stripe.purchaseProducts);
 
 
 app.listen({ port: 3000 }, () => {

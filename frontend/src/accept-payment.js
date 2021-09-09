@@ -3,6 +3,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements, useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
 import axiox from "axios";
 import idx from 'idx';
+import TestCards from './test-cards'
 
 const stripePromise = loadStripe(process.env.STRIPE_PUB_KEY, { stripeAccount: process.env.STRIPE_CUS_ACCOUNT_ID });
 
@@ -231,26 +232,7 @@ const AcceptPaymentDemo = () => {
       <div className="row justify-content-md-center">
         <div className="col-md-8">
           <form className="mt-5 text-center">
-            <ul className="list-group mb-5">
-              <li className="list-group-item d-flex justify-content-between lh-condensed">
-                <div>
-                  <h6 className="my-0">Payment succeeds</h6>
-                </div>
-                <span className="text-success">4242 4242 4242 4242</span>
-              </li>
-              <li className="list-group-item d-flex justify-content-between lh-condensed">
-                <div>
-                  <h6 className="my-0">Payment requires authentication</h6>
-                </div>
-                <span className="text-warning">4000 0025 0000 3155</span>
-              </li>
-              <li className="list-group-item d-flex justify-content-between lh-condensed">
-                <div>
-                  <h6 className="my-0">Payment is declined</h6>
-                </div>
-                <span className="text-danger">4000 0000 0000 9995</span>
-              </li>
-            </ul>
+            <TestCards />
             <div className="mb-5">
               <CardElement options={CARD_ELEMENT_OPTIONS} onChange={clearMsg} />
               <div className="custom-control custom-checkbox text-left">
