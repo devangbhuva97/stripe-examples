@@ -107,7 +107,6 @@ const PurchaseProductsDemo = () => {
   const [successMsg, setSuccessMsg] = useState();
   const [product, handleProduct] = useState();
   const [bumpProducts, handleBumpProducts] = useState([]);
-  const [name, handleNameChange] = useState('');
 
   const handleProductChange = (e) => {
     handleProduct(e.target.value)
@@ -145,7 +144,6 @@ const PurchaseProductsDemo = () => {
     if (createPaymentMethodPayload.error) return setErrorMsg(createPaymentMethodPayload.error.message);
 
     const data = {
-      name, 
       products: [ product, ...bumpProducts],
       payment_method: createPaymentMethodPayload.paymentMethod.id,
     }
@@ -158,9 +156,15 @@ const PurchaseProductsDemo = () => {
 
     if (purchaseProductsError) return setErrorMsg(purchaseProductsError);
 
-    const confirmCardPaymentPayload = await stripe.confirmCardPayment(purchaseProductsResponse.data.client_secret);
+    if (purchaseProductsResponse.data.client_secret) {
+      const confirmCardPaymentPayload = await stripe.confirmCardPayment(purchaseProductsResponse.data.client_secret);
+  
+      console.log("[Confirm Card Payment]", confirmCardPaymentPayload);
+    }
 
-    console.log("[Confirm Card Payment]", confirmCardPaymentPayload);
+    const upSellPurchaseResponse = await axiox.post(`${process.env.API_URL}/up-sell-purchase`, { payment_method: createPaymentMethodPayload.paymentMethod.id });
+
+    console.log("[Up Sell Purchase]", upSellPurchaseResponse);
 
     return setSuccessMsg('Products Purchased!');
 
