@@ -157,17 +157,35 @@ const PurchaseProductsDemo = () => {
     if (purchaseProductsError) return setErrorMsg(purchaseProductsError);
 
     if (purchaseProductsResponse.data.client_secret) {
-      const confirmCardPaymentPayload = await stripe.confirmCardPayment(purchaseProductsResponse.data.client_secret);
+      const confirmCardPaymentPayload = await stripe.confirmCardPayment(purchaseProductsResponse.data.client_secret, { payment_method: createPaymentMethodPayload.paymentMethod.id, setup_future_usage: 'off_session' });
   
       console.log("[Confirm Card Payment]", confirmCardPaymentPayload);
     }
 
-    const upSellPurchaseResponse = await axiox.post(`${process.env.API_URL}/up-sell-purchase`, { payment_method: createPaymentMethodPayload.paymentMethod.id });
-
-    console.log("[Up Sell Purchase]", upSellPurchaseResponse);
-
     return setSuccessMsg('Products Purchased!');
 
+  }
+
+  const purchaseUpSellProduct = async (type) => {
+
+    const upSellPurchaseResponse = await axiox.post(`${process.env.API_URL}/up-sell-${type}`);
+
+    console.log('====================================================');
+    console.log(`[Up Sell ${type.toUpperCase()} Product]`, upSellPurchaseResponse);
+
+    const upSellPurchaseError = idx(upSellPurchaseResponse,_ => _.data.error);
+
+    if (upSellPurchaseError) return setErrorMsg(upSellPurchaseError);
+
+    if (upSellPurchaseResponse.data.client_secret && upSellPurchaseResponse.data.last_payment_error && upSellPurchaseResponse.data.last_payment_error.payment_method.id) {
+
+      const confirmCardPaymentPayload = await stripe.confirmCardPayment(upSellPurchaseResponse.data.client_secret, {
+        payment_method: upSellPurchaseResponse.data.last_payment_error.payment_method.id
+      })
+
+      console.log("[Confirm Card Payment]", confirmCardPaymentPayload);
+
+    }
   }
 
   return (
@@ -212,6 +230,17 @@ const PurchaseProductsDemo = () => {
             <div>
               <button type="button" className="mb-4" onClick={purchaseProducts} disabled={!stripe}>
                 Purchase Products
+              </button>
+            </div>
+            <hr />
+            <div>
+              <button type="button" className="mb-4" onClick={() => purchaseUpSellProduct('onetime')}>
+                Purchase Up Sell One time Product
+              </button>
+            </div>
+            <div>
+              <button type="button" className="mb-4" onClick={() => purchaseUpSellProduct('recurring')}>
+                Purchase Up Sell Subscription Product
               </button>
             </div>
           </form>

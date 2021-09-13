@@ -1,6 +1,8 @@
 require('dotenv').config();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
+const CUSTOMER_ID = 'cus_KBO625mHHkn2T4'
+
 const setupIntent = async (req, res) => {
   try {
     const intent = await stripe.setupIntents.create({ ...req.body }, { stripeAccount: process.env.STRIPE_CUS_ACCOUNT_ID });
@@ -133,15 +135,18 @@ const purchaseProducts = async (req, res) => {
     
     await stripe.paymentMethods.attach(
       payment_method,
-      { customer: 'cus_KBO625mHHkn2T4' }
+      { customer: CUSTOMER_ID }
     );
+
+    await stripe.customers.update(CUSTOMER_ID, { invoice_settings: { default_payment_method: payment_method } })
+
     const recurringItem = products.find(id => PRODUCTS.find(p => p.id === id).type === 'R')
     const recurringItemDetails = PRODUCTS.find(p => p.id === recurringItem)
     const onetimeItems = products.filter(id => PRODUCTS.find(p => p.id === id).type === 'O')
     
     if (recurringItemDetails) {
       const subscription = await stripe.subscriptions.create({
-        customer: 'cus_KBO625mHHkn2T4',
+        customer: CUSTOMER_ID,
         items: [
           { price: recurringItemDetails.id },
         ],
@@ -160,7 +165,7 @@ const purchaseProducts = async (req, res) => {
 
       const onetimeItemDetails = PRODUCTS.find(p => p.id === onetimeItems[0])
       
-      const paymentIntent = await stripe.paymentIntents.create({ amount: onetimeItemDetails.amount * 100, currency: 'USD', customer: 'cus_KBO625mHHkn2T4', payment_method, confirm: false });
+      const paymentIntent = await stripe.paymentIntents.create({ amount: onetimeItemDetails.amount * 100, currency: 'USD', customer: CUSTOMER_ID, payment_method, confirm: false });
 
       return res.json({ paymentIntent, client_secret: paymentIntent && paymentIntent.client_secret })
 
@@ -168,10 +173,10 @@ const purchaseProducts = async (req, res) => {
 
 
     // Free item for create invoice
-    const freeInvoiceItem = await stripe.invoiceItems.create({ customer: 'cus_KBO625mHHkn2T4', amount: 0, currency: 'USD', description: 'Invoice Fee' });
-    await stripe.invoiceItems.create({ customer: 'cus_KBO625mHHkn2T4', amount: 1, currency: 'USD', description: 'Invoice Fee#2' });
+    const freeInvoiceItem = await stripe.invoiceItems.create({ customer: CUSTOMER_ID, amount: 0, currency: 'USD', description: 'Invoice Fee' });
+    await stripe.invoiceItems.create({ customer: CUSTOMER_ID, amount: 1, currency: 'USD', description: 'Invoice Fee#2' });
 
-    const invoice = await stripe.invoices.create({ customer: 'cus_KBO625mHHkn2T4', default_payment_method: payment_method });
+    const invoice = await stripe.invoices.create({ customer: CUSTOMER_ID, default_payment_method: payment_method });
     const invoiceLineItemIds = invoice && invoice.lines && invoice.lines.data ? invoice.lines.data.map(key => key.id) : []
 
     const itemIdsDiff = invoiceLineItemIds.filter((v) => v !== freeInvoiceItem.id);
@@ -182,7 +187,7 @@ const purchaseProducts = async (req, res) => {
     }
 
     for (const price of products) {
-      await stripe.invoiceItems.create({ customer: 'cus_KBO625mHHkn2T4', price, invoice: invoice.id });
+      await stripe.invoiceItems.create({ customer: CUSTOMER_ID, price, invoice: invoice.id });
     }
     const finalizInvoice = await stripe.invoices.finalizeInvoice(invoice.id, { expand: ['payment_intent'] });
     
@@ -197,29 +202,50 @@ const purchaseProducts = async (req, res) => {
   }
 }
 
-const upSellPurchase = async (req, res) => {
+const upSellOnetimeProduct = async (req, res) => {
   try {
-    
-    const { payment_method } = req.body
+    const customer = await stripe.customers.retrieve(CUSTOMER_ID);
 
-    const onetime = await stripe.paymentIntents.create({ amount: 200, currency: 'USD', customer: 'cus_KBO625mHHkn2T4', payment_method, confirm: true });
-
-    const subscription = await stripe.subscriptions.create({
-      customer: 'cus_KBO625mHHkn2T4',
-      items: [
-        { price: 'price_1JZCIqCScnf89tZoW5QoZjTv' },
-      ],
-      default_payment_method: payment_method
-    });
-    
-    return res.json({ 
-      onetime, 
-      subscription 
-    });
-  
+    try {
+      const onetime = await stripe.paymentIntents.create({ 
+        amount: 200, 
+        currency: 'USD', 
+        customer: customer.id, 
+        payment_method: customer.invoice_settings.default_payment_method, 
+        off_session: true, 
+        confirm: true 
+      });
+      return res.json({ ...onetime });
+    } catch (error) {
+      console.log({ ...error, errorStack: error.stack });
+      const paymentIntentRetrieved = await stripe.paymentIntents.retrieve(error.raw.payment_intent.id);
+      return res.json({ ...paymentIntentRetrieved })
+    }
   } catch (error) {
     console.log({ ...error, errorStack: error.stack });
     return res.json({ error: error.message || 'Something went wrong!' });
+  }
+}
+
+const upSellRecuringProduct = async (req, res) => {
+  try {
+    const subscription = await stripe.subscriptions.create({
+      customer: CUSTOMER_ID,
+      items: [
+        { price: 'price_1JZCIqCScnf89tZoW5QoZjTv' },
+      ],
+      off_session: true
+    });
+    return res.json({ ...subscription });
+  } catch (error) {
+    console.log({ ...error, errorStack: error.stack });
+    try {
+      const paymentIntentRetrieved = await stripe.paymentIntents.retrieve(error.raw.payment_intent.id);
+      return res.json({ ...paymentIntentRetrieved })
+    } catch (error) {
+      console.log({ ...error, errorStack: error.stack });
+      return res.json({ error: error.message || 'Something went wrong!' });
+    }
   }
 }
 
@@ -230,5 +256,6 @@ module.exports = {
   createCustomer,
   updatePaymentIntent,
   purchaseProducts,
-  upSellPurchase
+  upSellOnetimeProduct,
+  upSellRecuringProduct
 }

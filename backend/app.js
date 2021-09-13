@@ -31,7 +31,8 @@ app.post('/confirm-payment-intent', stripe.confirmPaymentIntent);
 app.post('/create-customer', stripe.createCustomer);
 app.post('/update-payment-intent', stripe.updatePaymentIntent);
 app.post('/purchase-products', stripe.purchaseProducts);
-app.post('/up-sell-purchase', stripe.upSellPurchase)
+app.post('/up-sell-onetime', stripe.upSellOnetimeProduct);
+app.post('/up-sell-recurring', stripe.upSellRecuringProduct)
 
 
 app.listen({ port: 3000 }, () => {
