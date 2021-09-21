@@ -157,7 +157,7 @@ const PurchaseProductsDemo = () => {
     if (purchaseProductsError) return setErrorMsg(purchaseProductsError);
 
     if (purchaseProductsResponse.data.client_secret) {
-      const confirmCardPaymentPayload = await stripe.confirmCardPayment(purchaseProductsResponse.data.client_secret, { payment_method: createPaymentMethodPayload.paymentMethod.id, setup_future_usage: 'off_session' });
+      const confirmCardPaymentPayload = await stripe.confirmCardPayment(purchaseProductsResponse.data.client_secret, { payment_method: purchaseProductsResponse.data.payment_method, setup_future_usage: 'off_session' });
   
       console.log("[Confirm Card Payment]", confirmCardPaymentPayload);
     }

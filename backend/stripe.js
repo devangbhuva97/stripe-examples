@@ -1,7 +1,7 @@
 require('dotenv').config();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
-const CUSTOMER_ID = 'cus_KBO625mHHkn2T4'
+const CUSTOMER_ID = 'cus_KGcdWyLU6tPatJ'
 
 const setupIntent = async (req, res) => {
   try {
@@ -131,12 +131,29 @@ const PRODUCTS = [
 
 const purchaseProducts = async (req, res) => {
   try {
-    const { products, payment_method } = req.body;
+    let { products, payment_method } = req.body;
+    let hasExistingPaymentMethod = false;
+    const paymentSource = await stripe.paymentMethods.retrieve(payment_method);
+  
+    if (paymentSource && paymentSource.card) {
+      const { exp_month, exp_year, fingerprint } = paymentSource.card;
+      const { data } = await stripe.paymentMethods.list({ customer: CUSTOMER_ID, type: 'card'})
+      const existingPaymentMethod = data.find(x => x.card.fingerprint === fingerprint);
+      if (existingPaymentMethod) {
+        if (existingPaymentMethod.card.exp_month !== exp_month || existingPaymentMethod.card.exp_year !== exp_year) {
+          await stripe.paymentMethods.update(existingPaymentMethod.id, { card: { exp_month, exp_year } });
+        }
+        hasExistingPaymentMethod = true
+        payment_method = existingPaymentMethod.id;
+      }
+    }
     
-    await stripe.paymentMethods.attach(
-      payment_method,
-      { customer: CUSTOMER_ID }
-    );
+    if (!hasExistingPaymentMethod) {
+      await stripe.paymentMethods.attach(
+        payment_method,
+        { customer: CUSTOMER_ID }
+      );
+    }
 
     await stripe.customers.update(CUSTOMER_ID, { invoice_settings: { default_payment_method: payment_method } })
 
@@ -158,7 +175,7 @@ const purchaseProducts = async (req, res) => {
         expand: ['latest_invoice.payment_intent']
       });
 
-      return res.json({ subscription, client_secret: subscription.latest_invoice.payment_intent && subscription.latest_invoice.payment_intent.client_secret })
+      return res.json({ payment_method, subscription, client_secret: subscription.latest_invoice.payment_intent && subscription.latest_invoice.payment_intent.client_secret })
     }
 
     if (onetimeItems.length === 1) {
@@ -167,7 +184,7 @@ const purchaseProducts = async (req, res) => {
       
       const paymentIntent = await stripe.paymentIntents.create({ amount: onetimeItemDetails.amount * 100, currency: 'USD', customer: CUSTOMER_ID, payment_method, confirm: false });
 
-      return res.json({ paymentIntent, client_secret: paymentIntent && paymentIntent.client_secret })
+      return res.json({ payment_method, paymentIntent, client_secret: paymentIntent && paymentIntent.client_secret })
 
     }
 
@@ -192,6 +209,7 @@ const purchaseProducts = async (req, res) => {
     const finalizInvoice = await stripe.invoices.finalizeInvoice(invoice.id, { expand: ['payment_intent'] });
     
     return res.json({ 
+      payment_method,
       invoice: finalizInvoice, 
       client_secret: finalizInvoice.payment_intent.client_secret 
     });
