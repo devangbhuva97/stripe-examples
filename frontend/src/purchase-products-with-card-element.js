@@ -4,6 +4,7 @@ import { Elements, useStripe, useElements, CardElement } from "@stripe/react-str
 import axiox from "axios";
 import idx from 'idx';
 import TestCards from './test-cards'
+import { PRODUCTS } from "./utils/products";
 
 const stripePromise = loadStripe(process.env.STRIPE_PUB_KEY, { stripeAccount: process.env.STRIPE_CUS_ACCOUNT_ID });
 
@@ -25,97 +26,18 @@ const CARD_ELEMENT_OPTIONS = {
   },
 };
 
-// https://dashboard.stripe.com/test/products/prod_KBMjirO3HYBPLa
-// https://dashboard.stripe.com/test/products/prod_KBMns8wuQTRrV8
-const PRODUCTS = [
-  {
-    id: 'price_1JX00PCScnf89tZoLhwHReEP',
-    type: 'O',
-    amount: '$18',
-    desc: 'One time | #1'
-  },
-  {
-    id: 'price_1JX00PCScnf89tZoAGeWPujZ',
-    type: 'R',
-    amount: '$13',
-    desc: 'Daily Recurring | #1',
-    trail_period: 0,
-  },
-  {
-    id: 'price_1JX00PCScnf89tZoQoEiRE4P',
-    type: 'R',
-    amount: '$17',
-    desc: 'Weekly Recurring | #1',
-    trail_period: 14,
-  },
-  {
-    id: 'price_1JX00PCScnf89tZoiI4kOVDj',
-    type: 'R',
-    amount: '$12',
-    desc: 'Monthly Recurring | #1',
-    trail_period: 28,
-  },
-  {
-    id: 'price_1JX03WCScnf89tZoFrRgeWRQ',
-    type: 'O',
-    amount: '$24',
-    desc: 'One time | #2'
-  },
-  {
-    id: 'price_1JX03WCScnf89tZoUX3gHxkF',
-    type: 'R',
-    amount: '$23',
-    desc: 'Monthly Recurring | #2',
-    trail_period: 7,
-  },
-  {
-    id: 'price_1JX03WCScnf89tZoyvxJxDWs',
-    type: 'R',
-    amount: '$27',
-    desc: 'Daily Recurring | #2',
-    trail_period: 15,
-  },
-  {
-    id: 'price_1JX03WCScnf89tZoY6a8M9hp',
-    type: 'R',
-    amount: '$22',
-    desc: 'Weekly Recurring | #2',
-    trail_period: 10,
-  }
-]
-
-const BUMP_PRODUCTS = [
-  {
-    id: 'price_1JX00PCScnf89tZoHOD631UN',
-    type: 'O',
-    amount: '$14',
-    desc: 'One time | #1'
-  },
-  {
-    id: 'price_1JX03WCScnf89tZosJV2DMiU',
-    type: 'O',
-    amount: '$28',
-    desc: 'One time | #2'
-  },
-]
-
 const PurchaseProductsDemo = () => {
   const stripe = useStripe();
   const elements = useElements();
 
   const [errorMsg, setErrorMsg] = useState();
   const [successMsg, setSuccessMsg] = useState();
-  const [product, handleProduct] = useState();
-  const [bumpProducts, handleBumpProducts] = useState([]);
+  const [products, handleProducts] = useState([]);
 
-  const handleProductChange = (e) => {
-    handleProduct(e.target.value)
-  }
-
-  const handleBumpProductChange = (e) => {
+  const handleProductsChange = (e) => {
     const { checked, id } = e.target;
-    if (checked) handleBumpProducts((prev) => [...prev, id])
-    if (!checked) handleBumpProducts((prev) => prev.filter(p => p !== id))
+    if (checked) handleProducts((prev) => [...prev, id])
+    if (!checked) handleProducts((prev) => prev.filter(p => p !== id))
   }
 
   const clearMsg = () => {
@@ -126,7 +48,7 @@ const PurchaseProductsDemo = () => {
   const purchaseProducts = async (event) => {
     event.preventDefault();
     
-    if (!product) return setErrorMsg('Please select at least 1 product')
+    if (!products?.length) return setErrorMsg('Please select at least 1 product')
 
     // if (!name) return setErrorMsg('Please enter name')
     
@@ -144,7 +66,7 @@ const PurchaseProductsDemo = () => {
     if (createPaymentMethodPayload.error) return setErrorMsg(createPaymentMethodPayload.error.message);
 
     const data = {
-      products: [ product, ...bumpProducts],
+      products,
       payment_method: createPaymentMethodPayload.paymentMethod.id,
     }
     const purchaseProductsResponse = await axiox.post(`${process.env.API_URL}/purchase-products`, data);
@@ -199,23 +121,9 @@ const PurchaseProductsDemo = () => {
               {
                 PRODUCTS.map(p => {
                   return(
-                    <div className="custom-control custom-radio text-left" key={p.id}>
-                      <input type="radio" className="custom-control-input" id={p.id} value={p.id} name='product' onChange={handleProductChange} />
-                      <label className="custom-control-label text-dark" htmlFor={p.id}>{`${p.amount} - ${p.desc} - Trial: ${p.trail_period || 0} days`}</label>
-                    </div>
-                  )
-                })
-              }
-            </div>
-            <hr />
-            <div>Bump Products</div>
-            <div>
-              {
-                BUMP_PRODUCTS.map(p => {
-                  return(
                     <div className="custom-control custom-checkbox text-left" key={p.id}>
-                      <input type="checkbox" className="custom-control-input" id={p.id} value={bumpProducts.includes(p.id)} onChange={handleBumpProductChange} />
-                      <label className="custom-control-label text-dark" htmlFor={p.id}>{`${p.amount} - ${p.desc}`}</label>
+                      <input type="checkbox" className="custom-control-input" id={p.id} value={p.id} name='product' onChange={handleProductsChange} />
+                      <label className="custom-control-label text-dark" htmlFor={p.id}>{`${p.amount} - ${p.desc} - Trial: ${p.trail_period || 0} days`}</label>
                     </div>
                   )
                 })
@@ -250,7 +158,7 @@ const PurchaseProductsDemo = () => {
   );
 };
 
-const PurchaseProducts = () => {
+const PurchaseProductsWithCardElement = () => {
   return (
     <Elements stripe={stripePromise}>
       <PurchaseProductsDemo />
@@ -258,4 +166,4 @@ const PurchaseProducts = () => {
   )
 }
 
-export default PurchaseProducts;
+export default PurchaseProductsWithCardElement;

@@ -1,7 +1,7 @@
 require('dotenv').config();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
-const CUSTOMER_ID = 'cus_KGcdWyLU6tPatJ'
+const CUSTOMER_ID = 'cus_Mm1vz5nYyLBUOV'
 
 const setupIntent = async (req, res) => {
   try {
@@ -58,74 +58,32 @@ const updatePaymentIntent = async (req, res) => {
   }
 }
 
-// https://dashboard.stripe.com/test/products/prod_KBMjirO3HYBPLa
-// https://dashboard.stripe.com/test/products/prod_KBMns8wuQTRrV8
+// https://dashboard.stripe.com/test/products/prod_Masp3fgiulAhqC
 const PRODUCTS = [
   {
-    id: 'price_1JX00PCScnf89tZoLhwHReEP',
+    id: 'price_1Lrh7cAjORjIkyJ0cKYhIHlc',
+    type: 'R',
+    amount: 299,
+    desc: 'Laptop Monthly Recurring | 14 days free trial',
+    trail_period: 14
+  },
+  {
+    id: 'price_1Lrh7PAjORjIkyJ0o5QImlcO',
+    type: 'R',
+    amount: 249,
+    desc: 'Laptop Monthly Recurring',
+  },
+  {
+    id: 'price_1M6txQAjORjIkyJ0Hul7u3Iq',
     type: 'O',
-    amount: 18,
-    desc: 'One time | #1'
+    amount: 1099,
+    desc: 'Laptop',
   },
   {
-    id: 'price_1JX00PCScnf89tZoHOD631UN',
+    id: 'price_1M6u03AjORjIkyJ03oDBQ0AY',
     type: 'O',
-    amount: 14,
-    desc: 'One time | #1'
-  },
-  {
-    id: 'price_1JX00PCScnf89tZoAGeWPujZ',
-    type: 'R',
-    amount: 13,
-    desc: 'Daily Recurring | #1',
-    trail_period: 0,
-  },
-  {
-    id: 'price_1JX00PCScnf89tZoQoEiRE4P',
-    type: 'R',
-    amount: 17,
-    desc: 'Weekly Recurring | #1',
-    trail_period: 14,
-  },
-  {
-    id: 'price_1JX00PCScnf89tZoiI4kOVDj',
-    type: 'R',
-    amount: 12,
-    desc: 'Monthly Recurring | #1',
-    trail_period: 28,
-  },
-  {
-    id: 'price_1JX03WCScnf89tZosJV2DMiU',
-    type: 'O',
-    amount: 28,
-    desc: 'One time | #2'
-  },
-  {
-    id: 'price_1JX03WCScnf89tZoFrRgeWRQ',
-    type: 'O',
-    amount: 24,
-    desc: 'One time | #2'
-  },
-  {
-    id: 'price_1JX03WCScnf89tZoUX3gHxkF',
-    type: 'R',
-    amount: 23,
-    desc: 'Monthly Recurring | #2',
-    trail_period: 7,
-  },
-  {
-    id: 'price_1JX03WCScnf89tZoyvxJxDWs',
-    type: 'R',
-    amount: 27,
-    desc: 'Daily Recurring | #2',
-    trail_period: 15,
-  },
-  {
-    id: 'price_1JX03WCScnf89tZoY6a8M9hp',
-    type: 'R',
-    amount: 22,
-    desc: 'Weekly Recurring | #2',
-    trail_period: 10,
+    amount: 199,
+    desc: 'Laptop Charger',
   }
 ]
 
@@ -267,6 +225,68 @@ const upSellRecuringProduct = async (req, res) => {
   }
 }
 
+const purchaseProductsV2 = async (req, res) => {
+  try {
+    const { products } = req.body
+    // const paymentIntent = await stripe.paymentIntents.create({
+    //   customer: CUSTOMER_ID,
+    //   amount: 1099,
+    //   currency: 'usd',
+    //   automatic_payment_methods: {
+    //     enabled: true
+    //   },
+    //   setup_future_usage: 'off_session',
+    // }, { stripeAccount: process.env.STRIPE_CUS_ACCOUNT_ID });
+
+    // return res.json({ paymentIntent, client_secret: paymentIntent && paymentIntent.client_secret })
+
+
+    if (!products || !products.length) {
+      return res.json({ error: 'Products are required!' });
+    }
+    const recurringItem = products.find(id => PRODUCTS.find(p => p.id === id).type === 'R')
+    const recurringItemDetails = PRODUCTS.find(p => p.id === recurringItem)
+    const onetimeItems = products.filter(id => PRODUCTS.find(p => p.id === id).type === 'O')
+
+    if (recurringItemDetails) {
+      const subscription = await stripe.subscriptions.create({
+        customer: CUSTOMER_ID,
+        items: [
+          { price: recurringItemDetails.id },
+        ],
+        add_invoice_items: onetimeItems.map(price => ({ price })),
+        trial_period_days: recurringItemDetails.trail_period,
+        payment_behavior: 'default_incomplete',
+        expand: ['latest_invoice.payment_intent'],
+      });
+
+      return res.json({ subscription, client_secret: subscription.latest_invoice.payment_intent && subscription.latest_invoice.payment_intent.client_secret })
+    }
+
+    const invoice = await stripe.invoices.create({ 
+      customer: CUSTOMER_ID, 
+      pending_invoice_items_behavior: 'exclude'
+    })
+    for (const price of products) {
+      await stripe.invoiceItems.create({ customer: CUSTOMER_ID, price, invoice: invoice.id })
+    }
+
+    const finalizInvoice = await stripe.invoices.finalizeInvoice(invoice.id, { expand: ['payment_intent'] })
+
+    const paymentIntent = await stripe.paymentIntents.update(finalizInvoice.payment_intent.id, { setup_future_usage: 'off_session' })
+
+    return res.json({
+      invoice: finalizInvoice,
+      // paymentIntent: paymentIntent, 
+      client_secret: finalizInvoice.payment_intent.client_secret 
+    })
+
+  } catch (error) {
+    console.log({ ...error, errorStack: error.stack });
+    return res.json({ error: error.message || 'Something went wrong!' });
+  }
+}
+
 module.exports = {
   setupIntent,
   createPaymentIntent,
@@ -275,5 +295,6 @@ module.exports = {
   updatePaymentIntent,
   purchaseProducts,
   upSellOnetimeProduct,
-  upSellRecuringProduct
+  upSellRecuringProduct,
+  purchaseProductsV2
 }
