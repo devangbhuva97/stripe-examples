@@ -38,11 +38,12 @@ const PaymentElementForm = ({ setClientSecret, type = 'paymentIntent' }) => {
     if (error) {
       setErrorMessage(error.message);
     } else {
-      setClientSecret()
       if (paymentIntent?.status === 'succeeded') {
-      alert(`Payment Success - ${paymentIntent.id}`)
+        setClientSecret()
+        alert(`Payment Success - ${paymentIntent.id}`)
       } else if (paymentIntent?.status === 'processing') {
-      alert(`Payment Processing - ${paymentIntent.id}`)
+        setClientSecret()
+        alert(`Payment Processing - ${paymentIntent.id}`)
       } else {
         console.log(paymentIntent)
       }
@@ -65,11 +66,12 @@ const PaymentElementForm = ({ setClientSecret, type = 'paymentIntent' }) => {
     if (error) {
       setErrorMessage(error.message);
     } else {
-      setClientSecret()
       if (setupIntent?.status === 'succeeded') {
-      alert(`Payment Success - ${setupIntent.id}`)
+        setClientSecret()
+        alert(`Payment Success - ${setupIntent.id}`)
       } else if (setupIntent?.status === 'processing') {
-      alert(`Payment Processing - ${setupIntent.id}`)
+        setClientSecret()
+        alert(`Payment Processing - ${setupIntent.id}`)
       } else {
         console.log(setupIntent)
       }
