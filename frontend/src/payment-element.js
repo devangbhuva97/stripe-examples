@@ -94,7 +94,7 @@ const PaymentElementForm = ({ setClientSecret, type = 'paymentIntent' }) => {
 }
 
 const CustomPaymentElement = ({ clientSecret, setClientSecret, type }) => {
-  const stripePromise = loadStripe(process.env.STRIPE_PUB_KEY);
+  const stripePromise = loadStripe(process.env.STRIPE_PUB_KEY, { stripeAccount: process.env.STRIPE_CUS_ACCOUNT_ID });
   return (
     <Elements stripe={stripePromise} options={{ clientSecret }}>
       <PaymentElementForm setClientSecret={setClientSecret} type={type} />
