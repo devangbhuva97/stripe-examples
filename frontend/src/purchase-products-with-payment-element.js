@@ -5,15 +5,14 @@ import TestCards from './test-cards'
 import CustomPaymentElement from './payment-element'
 
 const PurchaseProductsWithPaymentElement = () => {
-  const [clientSecret, setClientSecret] = useState('');
   const [productType, setProductType] = useState('')
-  const [type, setPaymentType] = useState('')
   const [isLoading, setIsLoading] = useState();
+  const [paymentDetails, setPaymentDetails] = useState()
 
   const handlePurchaseProducts = async (event, type) => {
     event.preventDefault();
+    setPaymentDetails();
     setProductType(type)
-    if (clientSecret) setClientSecret();
     setIsLoading(type)
     try {
       return await purchaseProducts(type)
@@ -35,10 +34,7 @@ const PurchaseProductsWithPaymentElement = () => {
 
     if (purchaseProductsError) return setErrorMsg(purchaseProductsError);
 
-    if (purchaseProductsResponse.data.clientSecret) {
-      setClientSecret(purchaseProductsResponse.data.clientSecret);
-      setPaymentType(purchaseProductsResponse.data.type)
-    }
+    setPaymentDetails(purchaseProductsResponse.data)
 
     console.log(purchaseProductsResponse, '------purchaseProductsResponse-----')
   }
@@ -62,9 +58,9 @@ const PurchaseProductsWithPaymentElement = () => {
               </button>
             </div>
             <hr />
-            { productType && <h3 className="text-capitalize">{productType.split('_').join(' ')}</h3> }
+            { productType && <h3 className="text-uppercase">{productType.split('_').join(' ')}</h3> }
             {
-              clientSecret && <CustomPaymentElement clientSecret={clientSecret} setClientSecret={setClientSecret} type={type} />
+              paymentDetails?.clientSecret && <CustomPaymentElement paymentDetails={paymentDetails} setPaymentDetails={setPaymentDetails} />
             }
           </div>
         </div>

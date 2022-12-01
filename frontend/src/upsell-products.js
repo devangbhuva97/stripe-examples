@@ -30,6 +30,18 @@ const UpsellProductsDemo = () => {
     }
   }
 
+  const handlePaymentCallback = (paymentIntent) => {
+    if (paymentIntent?.status === 'succeeded') {
+      alert(`Payment Success - ${paymentIntent.id}`)
+      navigate('/')
+    } else if (paymentIntent?.status === 'processing') {
+      alert(`Payment Processing - ${paymentIntent.id}`)
+      navigate('/')
+    } else {
+      console.log(paymentIntent)
+    }
+  }
+
   const purchaseUpsellProducts = async (type) => {
     const purchaseProductsResponse = await axiox.post(`${process.env.API_URL}/payments/stripe/internal-poc/purchase-upsell`, { type });
 
@@ -40,8 +52,11 @@ const UpsellProductsDemo = () => {
 
     if (purchaseProductsError) return setErrorMsg(purchaseProductsError);
 
-    let { paymentIntent } = purchaseProductsResponse.data
-    if (paymentIntent.status === 'requires_confirmation') {
+    let { subscription, paymentIntent } = purchaseProductsResponse.data
+    if (subscription?.status === 'trialing') {
+      alert(`Payment Success - ${subscription.id}`)
+      navigate('/')
+    } else if (paymentIntent?.status === 'requires_confirmation') {
       const confirmCardPaymentPayload = await stripe.confirmCardPayment(paymentIntent.client_secret, {
         payment_method: paymentIntent.payment_method
       })
@@ -52,17 +67,9 @@ const UpsellProductsDemo = () => {
         return setErrorMessage(confirmCardPaymentPayload.error.message);
       }
 
-      paymentIntent = confirmCardPaymentPayload.paymentIntent
-    }
-
-    if (paymentIntent?.status === 'succeeded') {
-      alert(`Payment Success - ${paymentIntent.id}`)
-      navigate('/')
-    } else if (paymentIntent?.status === 'processing') {
-      alert(`Payment Processing - ${paymentIntent.id}`)
-      navigate('/')
+      handlePaymentCallback(confirmCardPaymentPayload.paymentIntent)
     } else {
-      console.log(paymentIntent)
+      setErrorMessage('Something went wrong!')
     }
   }
 

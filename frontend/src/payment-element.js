@@ -3,9 +3,10 @@ import React, { useState } from "react";
 import axiox from "axios";
 import { loadStripe } from "@stripe/stripe-js";
 import { useNavigate } from "react-router-dom";
+import idx from 'idx';
 
 
-const PaymentElementForm = ({ setClientSecret, type = 'paymentIntent' }) => {
+const PaymentElementForm = ({ setPaymentDetails, paymentDetails }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [errorMessage, setErrorMessage] = useState();
@@ -19,18 +20,26 @@ const PaymentElementForm = ({ setClientSecret, type = 'paymentIntent' }) => {
     setErrorMessage()
     setIsLoading(true)
     try {
-      if (type === 'paymentIntent') {
-        return await processConfirmPayment()
-      }
-      if (type === 'setupIntent') {
-        return await processConfirmCard()
-      }
-      throw new Error('Invaid type')
+      return await processConfirmPayment()
     } catch (error) {
       console.error(error)
       setErrorMessage('Something went wrong!')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handlePaymentCallback = (paymentIntent) => {
+    if (paymentIntent?.status === 'succeeded') {
+      setPaymentDetails()
+      alert(`Payment Success - ${paymentIntent.id}`)
+      navigate('/upsell')
+    } else if (paymentIntent?.status === 'processing') {
+      setPaymentDetails()
+      alert(`Payment Processing - ${paymentIntent.id}`)
+      navigate('/upsell')
+    } else {
+      console.log(paymentIntent)
     }
   }
 
@@ -46,48 +55,31 @@ const PaymentElementForm = ({ setClientSecret, type = 'paymentIntent' }) => {
     if (error) {
       setErrorMessage(error.message);
     } else {
-
-      const verifiedPaymentIntent = await axiox.post(`${process.env.API_URL}/payments/stripe/internal-poc/verify-purchase`, { type, id: paymentIntent.id });
-
-      console.log(verifiedPaymentIntent)
-
-      if (paymentIntent?.status === 'succeeded') {
-        setClientSecret()
-        alert(`Payment Success - ${paymentIntent.id}`)
-        navigate('/upsell')
-      } else if (paymentIntent?.status === 'processing') {
-        setClientSecret()
-        alert(`Payment Processing - ${paymentIntent.id}`)
-        navigate('/upsell')
+      if (paymentDetails.isAuth) {
+        await purchaseProducts(paymentDetails.type, paymentDetails.paymentIntent.id)
       } else {
-        console.log(paymentIntent)
+        const verifiedPaymentIntent = await axiox.post(`${process.env.API_URL}/payments/stripe/internal-poc/verify-purchase`, { id: paymentIntent.id });
+        return handlePaymentCallback(verifiedPaymentIntent.data)
       }
     }
   }
 
-  const processConfirmCard = async () => {
-    const { error, setupIntent } = await stripe.confirmSetup({ 
-      elements, 
-      confirmParams: {
-        return_url: `${window.location.origin}`
-      },
-      redirect: 'if_required' 
-    })
+  const purchaseProducts = async (type, authPaymentIntentId) => {
+    const purchaseProductsResponse = await axiox.post(`${process.env.API_URL}/payments/stripe/internal-poc/purchase`, { type, authPaymentIntentId });
 
-    console.log(setupIntent, error)
+    console.log('====================================================');
+    console.log("[Purchase Products]", purchaseProductsResponse);
 
-    if (error) {
-      setErrorMessage(error.message);
+    const purchaseProductsError = idx(purchaseProductsResponse,_ => _.data.error);
+
+    if (purchaseProductsError) return setErrorMsg(purchaseProductsError);
+
+    const { subscription } = purchaseProductsResponse.data
+    if (subscription?.status === 'trialing') {
+      alert(`Payment Success - ${subscription.id}`)
+      navigate('/upsell')
     } else {
-      if (setupIntent?.status === 'succeeded') {
-        setClientSecret()
-        alert(`Payment Success - ${setupIntent.id}`)
-      } else if (setupIntent?.status === 'processing') {
-        setClientSecret()
-        alert(`Payment Processing - ${setupIntent.id}`)
-      } else {
-        console.log(setupIntent)
-      }
+      setErrorMessage('Something went wrong!')
     }
   }
 
@@ -106,10 +98,11 @@ const PaymentElementForm = ({ setClientSecret, type = 'paymentIntent' }) => {
 
 const stripePromise = loadStripe(process.env.STRIPE_PUB_KEY, { stripeAccount: process.env.STRIPE_CUS_ACCOUNT_ID });
 
-const CustomPaymentElement = ({ clientSecret, setClientSecret, type }) => {
+const CustomPaymentElement = ({ paymentDetails, setPaymentDetails }) => {
+  const { clientSecret } = paymentDetails
   return (
     <Elements stripe={stripePromise} options={{ clientSecret }}>
-      <PaymentElementForm setClientSecret={setClientSecret} type={type} />
+      <PaymentElementForm setPaymentDetails={setPaymentDetails} paymentDetails={paymentDetails} />
     </Elements>
   )
 }
