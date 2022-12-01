@@ -74,8 +74,8 @@ const UpsellProductsDemo = () => {
             <h2 className="mb-2">Upsell</h2>
             <TestCards />
             <div className="d-flex justify-content-between mb-4">
-              <button disabled={isLoading || !stripe} type="button" onClick={(e) => handlePurchaseProducts(e, 'recurring')}>
-                { isLoading === 'recurring' ? 'Processing...' : 'Recurring without Trail' }
+              <button disabled={isLoading || !stripe} type="button" onClick={(e) => handlePurchaseProducts(e, 'recurring_without_trial')}>
+                { isLoading === 'recurring_without_trial' ? 'Processing...' : 'Recurring without Trail' }
               </button>
               <button disabled={isLoading || !stripe} type="button" onClick={(e) => handlePurchaseProducts(e, 'recurring_with_trail')}>
                 { isLoading === 'recurring_with_trail' ? 'Processing...' : 'Recurring with Trail' }

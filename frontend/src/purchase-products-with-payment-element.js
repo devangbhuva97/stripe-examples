@@ -51,8 +51,8 @@ const PurchaseProductsWithPaymentElement = () => {
             <h2 className="mb-2">Order Form</h2>
             <TestCards />
             <div className="d-flex justify-content-between mb-4">
-              <button disabled={isLoading} type="button" onClick={(e) => handlePurchaseProducts(e, 'recurring')}>
-                { isLoading === 'recurring' ? 'Processing...' : 'Recurring without Trail' }
+              <button disabled={isLoading} type="button" onClick={(e) => handlePurchaseProducts(e, 'recurring_without_trial')}>
+                { isLoading === 'recurring_without_trial' ? 'Processing...' : 'Recurring without Trail' }
               </button>
               <button disabled={isLoading} type="button" onClick={(e) => handlePurchaseProducts(e, 'recurring_with_trail')}>
                 { isLoading === 'recurring_with_trail' ? 'Processing...' : 'Recurring with Trail' }
