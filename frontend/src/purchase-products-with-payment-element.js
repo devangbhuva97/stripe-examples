@@ -6,12 +6,23 @@ import CustomPaymentElement from './payment-element'
 
 const PurchaseProductsWithPaymentElement = () => {
   const [clientSecret, setClientSecret] = useState('');
+  const [productType, setProductType] = useState('')
   const [type, setPaymentType] = useState('')
+  const [isLoading, setIsLoading] = useState();
 
-  const handlePurchaseProducts = (event, type) => {
+  const handlePurchaseProducts = async (event, type) => {
     event.preventDefault();
+    setProductType(type)
     if (clientSecret) setClientSecret();
-    return purchaseProducts(type)
+    setIsLoading(type)
+    try {
+      return await purchaseProducts(type)
+    } catch (error) {
+      console.error(error)
+      setErrorMessage('Something went wrong!')
+    } finally {
+      setIsLoading()
+    }
   }
 
   const purchaseProducts = async (type) => {
@@ -40,20 +51,18 @@ const PurchaseProductsWithPaymentElement = () => {
             <h2 className="mb-2">Order Form</h2>
             <TestCards />
             <div className="d-flex justify-content-between mb-4">
-              <button type="button" onClick={(e) => handlePurchaseProducts(e, 'recurring')}>
-                Recurring without Trail
+              <button disabled={isLoading} type="button" onClick={(e) => handlePurchaseProducts(e, 'recurring')}>
+                { isLoading === 'recurring' ? 'Processing...' : 'Recurring without Trail' }
               </button>
-              <button type="button" onClick={(e) => handlePurchaseProducts(e, 'recurring_with_trail')}>
-                Recurring with Trail
+              <button disabled={isLoading} type="button" onClick={(e) => handlePurchaseProducts(e, 'recurring_with_trail')}>
+                { isLoading === 'recurring_with_trail' ? 'Processing...' : 'Recurring with Trail' }
               </button>
-              <button type="button" onClick={(e) => handlePurchaseProducts(e, 'onetime_with_invoice')}>
-                Onetime (Invoice)
-              </button>
-              <button type="button" onClick={(e) => handlePurchaseProducts(e, 'onetime')}>
-                Onetime
+              <button disabled={isLoading} type="button" onClick={(e) => handlePurchaseProducts(e, 'onetime')}>
+                { isLoading === 'onetime' ? 'Processing...' : 'Onetime' }
               </button>
             </div>
             <hr />
+            { productType && <h3 className="text-capitalize">{productType.split('_').join(' ')}</h3> }
             {
               clientSecret && <CustomPaymentElement clientSecret={clientSecret} setClientSecret={setClientSecret} type={type} />
             }

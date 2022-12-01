@@ -17,16 +17,21 @@ const PaymentElementForm = ({ setClientSecret, type = 'paymentIntent' }) => {
 
     if (!stripe || !elements) return;
     setErrorMessage()
-
-    if (type === 'paymentIntent') {
-      return processConfirmPayment()
+    setIsLoading(true)
+    try {
+      if (type === 'paymentIntent') {
+        return await processConfirmPayment()
+      }
+      if (type === 'setupIntent') {
+        return await processConfirmCard()
+      }
+      throw new Error('Invaid type')
+    } catch (error) {
+      console.error(error)
+      setErrorMessage('Something went wrong!')
+    } finally {
+      setIsLoading(false)
     }
-
-    if (type === 'setupIntent') {
-      return processConfirmCard()
-    }
-
-    alert('Something went wrong!')
   }
 
   const processConfirmPayment = async () => {
@@ -58,8 +63,6 @@ const PaymentElementForm = ({ setClientSecret, type = 'paymentIntent' }) => {
         console.log(paymentIntent)
       }
     }
-
-    setIsLoading(false);
   }
 
   const processConfirmCard = async () => {
@@ -86,8 +89,6 @@ const PaymentElementForm = ({ setClientSecret, type = 'paymentIntent' }) => {
         console.log(setupIntent)
       }
     }
-
-    setIsLoading(false);
   }
 
   return (

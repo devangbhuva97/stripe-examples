@@ -9,20 +9,28 @@ import { useNavigate } from "react-router-dom";
 const stripePromise = loadStripe(process.env.STRIPE_PUB_KEY, { stripeAccount: process.env.STRIPE_CUS_ACCOUNT_ID });
 
 const UpsellProductsDemo = () => {
-  const [clientSecret, setClientSecret] = useState('');
   const stripe = useStripe();
   const [errorMessage, setErrorMessage] = useState();
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState();
 
-  const handlePurchaseProducts = (event, type) => {
-    event.preventDefault();
-    if (clientSecret) setClientSecret();
+  const handlePurchaseProducts = async (event, type) => {
+    event.preventDefault()
 
-    return purchaseUpsellProducts(type)
+    if (!stripe) return;
+    setErrorMessage()
+    setIsLoading(type)
+    try {
+      return await purchaseUpsellProducts(type)
+    } catch (error) {
+      console.error(error)
+      setErrorMessage('Something went wrong!')
+    } finally {
+      setIsLoading()
+    }
   }
 
   const purchaseUpsellProducts = async (type) => {
-    setErrorMessage()
     const purchaseProductsResponse = await axiox.post(`${process.env.API_URL}/payments/stripe/internal-poc/purchase-upsell`, { type });
 
     console.log('====================================================');
@@ -48,11 +56,9 @@ const UpsellProductsDemo = () => {
     }
 
     if (paymentIntent?.status === 'succeeded') {
-      setClientSecret()
       alert(`Payment Success - ${paymentIntent.id}`)
       navigate('/')
     } else if (paymentIntent?.status === 'processing') {
-      setClientSecret()
       alert(`Payment Processing - ${paymentIntent.id}`)
       navigate('/')
     } else {
@@ -68,17 +74,14 @@ const UpsellProductsDemo = () => {
             <h2 className="mb-2">Upsell</h2>
             <TestCards />
             <div className="d-flex justify-content-between mb-4">
-              <button type="button" onClick={(e) => handlePurchaseProducts(e, 'recurring')}>
-                Recurring without Trail
+              <button disabled={isLoading || !stripe} type="button" onClick={(e) => handlePurchaseProducts(e, 'recurring')}>
+                { isLoading === 'recurring' ? 'Processing...' : 'Recurring without Trail' }
               </button>
-              <button type="button" onClick={(e) => handlePurchaseProducts(e, 'recurring_with_trail')}>
-                Recurring with Trail
+              <button disabled={isLoading || !stripe} type="button" onClick={(e) => handlePurchaseProducts(e, 'recurring_with_trail')}>
+                { isLoading === 'recurring_with_trail' ? 'Processing...' : 'Recurring with Trail' }
               </button>
-              <button type="button" onClick={(e) => handlePurchaseProducts(e, 'onetime_with_invoice')}>
-                Onetime (Invoice)
-              </button>
-              <button type="button" onClick={(e) => handlePurchaseProducts(e, 'onetime')}>
-                Onetime
+              <button disabled={isLoading || !stripe} type="button" onClick={(e) => handlePurchaseProducts(e, 'onetime')}>
+                { isLoading === 'onetime' ? 'Processing...' : 'Onetime' }
               </button>
             </div>
             {errorMessage && <div className="text-danger" >{errorMessage}</div>}
