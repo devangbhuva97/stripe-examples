@@ -1,6 +1,8 @@
 import { Elements, useStripe, useElements, PaymentElement } from "@stripe/react-stripe-js";
 import React, { useState } from "react";
+import axiox from "axios";
 import { loadStripe } from "@stripe/stripe-js";
+import { useNavigate } from "react-router-dom";
 
 
 const PaymentElementForm = ({ setClientSecret, type = 'paymentIntent' }) => {
@@ -8,6 +10,7 @@ const PaymentElementForm = ({ setClientSecret, type = 'paymentIntent' }) => {
   const elements = useElements();
   const [errorMessage, setErrorMessage] = useState();
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -38,12 +41,19 @@ const PaymentElementForm = ({ setClientSecret, type = 'paymentIntent' }) => {
     if (error) {
       setErrorMessage(error.message);
     } else {
+
+      const verifiedPaymentIntent = await axiox.post(`${process.env.API_URL}/payments/stripe/internal-poc/verify-purchase`, { type, id: paymentIntent.id });
+
+      console.log(verifiedPaymentIntent)
+
       if (paymentIntent?.status === 'succeeded') {
         setClientSecret()
         alert(`Payment Success - ${paymentIntent.id}`)
+        navigate('/upsell')
       } else if (paymentIntent?.status === 'processing') {
         setClientSecret()
         alert(`Payment Processing - ${paymentIntent.id}`)
+        navigate('/upsell')
       } else {
         console.log(paymentIntent)
       }
@@ -93,8 +103,9 @@ const PaymentElementForm = ({ setClientSecret, type = 'paymentIntent' }) => {
   )
 }
 
+const stripePromise = loadStripe(process.env.STRIPE_PUB_KEY, { stripeAccount: process.env.STRIPE_CUS_ACCOUNT_ID });
+
 const CustomPaymentElement = ({ clientSecret, setClientSecret, type }) => {
-  const stripePromise = loadStripe(process.env.STRIPE_PUB_KEY, { stripeAccount: process.env.STRIPE_CUS_ACCOUNT_ID });
   return (
     <Elements stripe={stripePromise} options={{ clientSecret }}>
       <PaymentElementForm setClientSecret={setClientSecret} type={type} />

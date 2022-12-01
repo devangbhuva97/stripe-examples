@@ -2,7 +2,7 @@ import React from 'react';
 
 const TestCards = () => {
   return(
-    <ul className="list-group mb-5">
+    <ul className="list-group mb-3">
       <li className="list-group-item d-flex justify-content-between lh-condensed">
         <div>
           <h6 className="my-0">Payment succeeds</h6>

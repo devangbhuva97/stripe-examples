@@ -8,10 +8,13 @@ const PurchaseProductsWithPaymentElement = () => {
   const [clientSecret, setClientSecret] = useState('');
   const [type, setPaymentType] = useState('')
 
-  const purchaseProducts = async (event, type) => {
+  const handlePurchaseProducts = (event, type) => {
     event.preventDefault();
     if (clientSecret) setClientSecret();
+    return purchaseProducts(type)
+  }
 
+  const purchaseProducts = async (type) => {
     const purchaseProductsResponse = await axiox.post(`${process.env.API_URL}/payments/stripe/internal-poc/purchase`, { type });
 
     console.log('====================================================');
@@ -34,18 +37,19 @@ const PurchaseProductsWithPaymentElement = () => {
       <div className="row justify-content-center">
         <div className="col-md-8">
           <div className="mt-2 text-center">
+            <h2 className="mb-2">Order Form</h2>
             <TestCards />
             <div className="d-flex justify-content-between mb-4">
-              <button type="button" onClick={(e) => purchaseProducts(e, 'recurring')}>
+              <button type="button" onClick={(e) => handlePurchaseProducts(e, 'recurring')}>
                 Recurring without Trail
               </button>
-              <button type="button" onClick={(e) => purchaseProducts(e, 'recurring_with_trail')}>
+              <button type="button" onClick={(e) => handlePurchaseProducts(e, 'recurring_with_trail')}>
                 Recurring with Trail
               </button>
-              <button type="button" onClick={(e) => purchaseProducts(e, 'onetime_with_invoice')}>
+              <button type="button" onClick={(e) => handlePurchaseProducts(e, 'onetime_with_invoice')}>
                 Onetime (Invoice)
               </button>
-              <button type="button" onClick={(e) => purchaseProducts(e, 'onetime')}>
+              <button type="button" onClick={(e) => handlePurchaseProducts(e, 'onetime')}>
                 Onetime
               </button>
             </div>
